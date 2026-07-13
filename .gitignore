@@ -1,0 +1,63 @@
+# ============================================================
+#  .gitignore — Homelab PME
+#  Objectif : ne JAMAIS versionner de secret ni de gros binaire.
+# ============================================================
+
+# --- Secrets : clés privées SSH ---
+id_ed25519
+id_rsa
+id_ecdsa
+id_dsa
+*.pub.bak
+known_hosts
+
+# --- Secrets : certificats & clés ---
+*.key
+*.pem
+*.pfx
+*.p12
+*.crt
+*.cer
+*.keystore
+
+# --- Secrets : variables d'environnement & identifiants ---
+*.env
+.env
+.env.*
+*.secret
+*password*
+*credentials*
+*.credentials
+
+# --- Dossiers de secrets ---
+secrets/
+secret/
+private/
+.ssh/
+
+# --- Images disque / ISO / gros binaires (trop lourds pour Git) ---
+*.iso
+*.img
+*.vmdk
+*.vhd
+*.vhdx
+*.ova
+*.qcow2
+opensense/
+opnsense/
+
+# --- Fichiers système Windows ---
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# --- Fichiers système macOS / Linux (au cas où) ---
+.DS_Store
+*~
+
+# --- Sauvegardes & temporaires d'éditeurs ---
+*.bak
+*.tmp
+*.swp
