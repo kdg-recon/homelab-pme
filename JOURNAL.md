@@ -90,3 +90,94 @@
 - Vérifié : nltest /dsgetdc:lab.local trouve \\SRV-AD-01, Internet OK.
 - À faire : distribuer le DNS du DC via le DHCP d'OPNsense (centralisation).
 
+## Incident majeur — jonction domaine impossible (bug e1000e)
+### Symptôme
+- Add-Computer échoue : "The specified network name is no longer available".
+- Ping (ICMP) et DNS (UDP) OK, mais TOUT le TCP échoue entre les VM.
+
+### Démarche de diagnostic (par couches)
+- DNS/nltest : OK (\\SRV-AD-01 trouvé) → pas un souci de résolution.
+- Service SMB (LanmanServer) : Running ; port 445 en écoute côté DC.
+- Règles pare-feu SMB-In : activées ; profils pare-feu : NotConfigured.
+- Pare-feux Windows désactivés des 2 côtés → TCP échoue toujours.
+- Routage (NextHop 0.0.0.0), ARP, tracert (1 saut) : réseau L2/L3 sain.
+- Offload désactivé : sans effet.
+- Test depuis l'HÔTE (autre type de carte) : TCP 445 échoue aussi
+  → cause isolée = carte réseau du DC en réception.
+
+### Cause racine
+- Carte virtuelle émulée "e1000e" de VMware : corrompt les paquets TCP
+  entrants (bug connu). ICMP/UDP non affectés.
+
+### Correction
+- Bascule carte e1000e -> vmxnet3 (edit .vmx : ethernet0.virtualDev).
+- Réattribution de l'IP fixe 10.10.10.10 sur la nouvelle carte du DC.
+- Poste W11 : idem vmxnet3 (DHCP, donc pas de reconfig IP).
+- Jonction au domaine réussie.
+
+### Leçons
+- Diagnostiquer par couches, du bas vers le haut.
+- Tester TOUJOURS au bon endroit (piège hôte/invité → réflexe `hostname`).
+- Une hypothèse se teste et s'abandonne si les faits l'infirment.
+
+## PC-WIN11-01 — jonction au domaine + première GPO
+- Poste effectivement JOINT au domaine lab.local (débloqué après l'incident e1000e).
+- Ouverture de session en compte de domaine LAB\... validée.
+- Première GPO créée puis liée à l'OU des postes.
+- Test concret : bandeau d'avertissement légal affiché à l'écran de connexion
+  (message d'ouverture de session interactive).
+- Vérifié : `gpupdate /force` puis reboot → le bandeau apparaît
+  → preuve que la stratégie descend bien du DC vers le poste client.
+
+## Versionnement — Git & GitHub
+- Projet mis sous versionnement Git : dépôt local initialisé, branche principale `main`.
+- `.gitignore` de sécurité : exclut clés privées SSH, *.key/*.pem/*.env, dossiers
+  secrets/, fichiers système Windows et l'ISO OPNsense (trop lourde pour Git).
+- Premier commit (README + JOURNAL + .gitignore), puis publication sur GitHub :
+  dépôt public servant de portfolio → https://github.com/kdg-recon/homelab-pme
+- Authentification par jeton personnel (PAT) : un SECRET, jamais committé.
+- Cycle de travail retenu : `git add .` → `git commit -m "..."` → `git push`.
+
+## SRV-WEB-01 — Docker installé
+- Docker Engine (dépôt officiel) + Compose plugin sur Ubuntu 26.04.
+- Utilisateur kevin ajouté au groupe docker (plus besoin de sudo).
+- Test hello-world OK : cycle image -> pull -> conteneur compris.
+
+## SRV-WEB-01 — premier conteneur applicatif
+- nginx lancé via `docker run -d -p 8080:80 nginx`, accessible sur http://10.10.10.20:8080.
+- Notions vues : image/conteneur, -d, --name, redirection de port -p, docker ps/stop/rm.
+- ⚠️ Sécurité notée : Docker contourne UFW (iptables direct). À corriger via ufw-docker / reverse proxy.
+
+## SRV-WEB-01 — Portainer (gestion visuelle de Docker)
+- Portainer déployé via Docker Compose (pile ~/docker/portainer).
+- Interface web : gestion des conteneurs, images, volumes et réseaux sans ligne de commande.
+- Accès https://10.10.10.20:9443 (compte admin créé au 1er lancement).
+- Utilité : vue d'ensemble + actions rapides (logs, redémarrage, inspection).
+
+## SRV-WEB-01 — stack de monitoring (Compose multi-services)
+- 3 conteneurs : node-exporter (capteur), prometheus (collecte), grafana (affichage).
+- Réseau Docker auto : les services se joignent par leur NOM (node-exporter, prometheus).
+- Grafana http://10.10.10.20:3000, source Prometheus (http://prometheus:9090).
+- Dashboard "Node Exporter Full" (ID 1860) importé : CPU/RAM/disque/réseau en temps réel.
+- Volumes nommés pour la persistance des données.
+
+## SRV-WEB-01 — reverse proxy (Nginx Proxy Manager)
+- NPM déployé (ports 80/443 + admin 81), pile ~/docker/npm.
+- Proxy Host : grafana.lab.local -> 10.10.10.20:3000.
+- Résolution via fichier hosts Windows (10.10.10.20 grafana.lab.local ...).
+- HTTPS reconnu : reporté (Let's Encrypt = domaine public requis, ou CA interne).
+- Concept : point d'entrée unique, accès par nom, SSL centralisé.
+
+## SRV-WEB-01 — sauvegardes (Restic)
+- Restic installé. Dépôt chiffré local : /srv/backups/restic-repo.
+- Mot de passe de dépôt stocké HORS serveur (gestionnaire de mots de passe).
+- Sauvegarde de /home/kevin/docker et /etc (snapshots datés).
+- ✅ Test de restauration RÉUSSI : fichier supprimé puis récupéré.
+- À venir : planification (timer), hors-site vers VPS (SFTP), données des volumes Docker.
+
+## SRV-WEB-01 — sauvegardes automatisées
+- Script /usr/local/bin/backup-lab.sh (backup + rotation keep-daily/weekly/monthly + prune).
+- Automatisation via systemd : backup-lab.service (quoi) + backup-lab.timer (quand : 02h30/nuit).
+- Persistent=true : rattrapage si serveur éteint. Vérif via journalctl -u backup-lab.service.
+- À venir : réplication hors-site vers le VPS (SFTP).
+

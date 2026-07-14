@@ -28,6 +28,9 @@ known_hosts
 *password*
 *credentials*
 *.credentials
+# Exception : les modèles SANS secret doivent, eux, être versionnés
+!.env.example
+!*.env.example
 
 # --- Dossiers de secrets ---
 secrets/
