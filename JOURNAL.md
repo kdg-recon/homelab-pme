@@ -181,6 +181,14 @@
 - Persistent=true : rattrapage si serveur éteint. Vérif via journalctl -u backup-lab.service.
 - À venir : réplication hors-site vers le VPS (SFTP).
 
+## SRV-ANSIBLE-01 — control node Ansible en place
+- Nouvelle VM Ubuntu Server 26.04 dédiée à l'automatisation (IP fixe 10.10.10.30).
+- Ansible installé UNIQUEMENT ici (approche agentless : pilotage des cibles par SSH,
+  rien à installer côté serveurs).
+- Premiers fichiers : inventory.ini (cibles) + durcissement.yml (playbook).
+- Lancement type : ansible-playbook -i inventory.ini durcissement.yml -K
+  (-K = demande le mot de passe sudo au lancement, jamais stocké).
+
 ## SRV-ANSIBLE-01 — idempotence validée
 - 2e exécution de durcissement.yml : ok=8, changed=0, failed=0. ✅
 - Concept ancré : Ansible décrit un ÉTAT, compare, et n'agit que sur l'écart.
@@ -200,4 +208,18 @@
 - validate: sshd -t => Ansible refuse d'écrire une config invalide (garde-fou).
 - Handler "Redemarrer SSH" : déclenché UNIQUEMENT si le fichier change (notify).
 - Résultat : srv-ansible-01 durci automatiquement, srv-web-01 inchangé.
+
+## Ansible — incidents résolus (étude de cas)
+- (a) UFW bannissait le control node : la règle "limit" sur OpenSSH prenait les
+  connexions rapprochées d'Ansible pour du brute-force → blocage.
+  Correctif : `ufw allow from 10.10.10.30` pour exempter le control node du rate-limit.
+- (b) sudo-rs (Ubuntu 26.04) incompatible avec l'escalade `become` d'Ansible.
+  Correctif : `update-alternatives --set sudo /usr/bin/sudo.ws`, désormais encodé
+  dans le playbook (module alternatives) → reproductible partout.
+- (c) Auto-verrouillage : PasswordAuthentication no appliqué avant le déploiement
+  de ma clé → accès coupé, réparé via la console VMware.
+  Correctif durable : placer la tâche authorized_key AVANT le durcissement SSH.
+  Leçon : l'ORDRE des tâches est une règle de sécurité (garder une porte d'entrée
+  valide avant de fermer les autres).
+- Versionné dans Git : dossier ansible/ (inventory.ini, durcissement.yml, README.md).
 

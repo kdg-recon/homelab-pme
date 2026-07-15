@@ -24,10 +24,11 @@ Internet
    │                       LAN = VMware Host-only (VMnet2)
    ▼
 LAN plat — 10.10.10.0/24   (passerelle OPNsense : 10.10.10.254)
-   ├── SRV-AD-01     10.10.10.10   Windows Server 2025 — AD DS / DNS
-   ├── SRV-WEB-01    10.10.10.20   Ubuntu Server 26.04 — Docker & services
-   ├── PC-WIN11-01   DHCP          Windows 11 Pro — poste joint au domaine
-   └── DHCP OPNsense 10.10.10.100 → 10.10.10.200
+   ├── SRV-AD-01      10.10.10.10   Windows Server 2025 — AD DS / DNS
+   ├── SRV-WEB-01     10.10.10.20   Ubuntu Server 26.04 — Docker & services
+   ├── SRV-ANSIBLE-01 10.10.10.30   Ubuntu Server 26.04 — control node Ansible
+   ├── PC-WIN11-01    DHCP          Windows 11 Pro — poste joint au domaine
+   └── DHCP OPNsense  10.10.10.100 → 10.10.10.200
 ```
 
 Détail complet du plan d'adressage et de la convention de nommage :
@@ -75,6 +76,15 @@ voir [`docs/architecture.md`](./docs/architecture.md).
 - **Automatisé via systemd** : service + timer (sauvegarde nocturne 02h30, rotation
   keep-daily/weekly/monthly + prune).
 
+### Automatisation — Ansible (SRV-ANSIBLE-01)
+- **Control node dédié** (`10.10.10.30`) ; approche **agentless** (SSH, rien à
+  installer sur les cibles).
+- Playbook de **durcissement idempotent** : APT, `fail2ban`, UFW (limit SSH + deny
+  incoming), services au boot, bascule `sudo-rs` → `sudo` classique, déploiement des
+  clés publiques et config SSH durcie (validée `sshd -t`, handler de restart).
+- Inventaire à 2 groupes (`webservers`, `control`) réunis dans `[linux:children]`.
+- Détails et incidents : voir [`ansible/README.md`](./ansible/README.md).
+
 ---
 
 ## 🛠️ Incidents résolus
@@ -100,7 +110,6 @@ voir [`docs/architecture.md`](./docs/architecture.md).
 - **VPS** — accès distant, réplication hors-site des sauvegardes, HTTPS public.
 - **Vaultwarden** — gestionnaire de mots de passe auto-hébergé.
 - **Wazuh / Suricata** — détection d'intrusion (HIDS / NIDS) et supervision sécurité.
-- **Ansible** — automatisation et infrastructure as code.
 - **VLAN** — segmentation réseau (séparation des services / départements).
 - **WireGuard** — VPN moderne pour l'accès distant sécurisé au LAN.
 
@@ -114,6 +123,7 @@ homelab-pme/
 ├── JOURNAL.md           Journal de bord chronologique et détaillé
 ├── docs/                Documentation (architecture, plan IP, nommage, procédures)
 ├── docker/              Fichiers docker-compose.yml (portainer, monitoring, npm)
+├── ansible/             Automatisation (inventaire + playbook de durcissement)
 └── scripts/             Scripts d'exploitation (ex. backup-lab.sh)
 ```
 

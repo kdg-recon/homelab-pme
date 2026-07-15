@@ -47,6 +47,15 @@
         name: sudo
         path: /usr/bin/sudo.ws
 
+    - name: Deployer les cles publiques d'administration
+      ansible.builtin.authorized_key:
+        user: kevin
+        state: present
+        key: "{{ lookup('file', item) }}"
+      loop:
+        - /home/kevin/.ssh/id_ed25519.pub
+        - /home/kevin/ansible/files/admin_windows.pub
+
     - name: Deposer la configuration SSH durcie
       ansible.builtin.copy:
         dest: /etc/ssh/sshd_config.d/00-hardening.conf

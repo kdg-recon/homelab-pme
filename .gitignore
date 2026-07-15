@@ -60,6 +60,13 @@ $RECYCLE.BIN/
 .DS_Store
 *~
 
+# --- Ansible ---
+*.retry
+# Fichiers de secrets chiffrés/à venir (ansible-vault) — par prudence
+vault.yml
+*vault*.yml
+group_vars/**/vault.yml
+
 # --- Sauvegardes & temporaires d'éditeurs ---
 *.bak
 *.tmp
