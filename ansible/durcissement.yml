@@ -1,0 +1,69 @@
+---
+- name: Durcissement de base des serveurs
+  hosts: linux
+  become: true
+
+  tasks:
+    - name: Mettre a jour le cache des paquets
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Installer les paquets de securite
+      ansible.builtin.apt:
+        name:
+          - fail2ban
+          - ufw
+          - unattended-upgrades
+        state: present
+
+    - name: Autoriser SSH dans UFW (mode limit)
+      community.general.ufw:
+        rule: limit
+        name: OpenSSH
+
+    - name: Politique UFW par defaut - refuser l'entrant
+      community.general.ufw:
+        direction: incoming
+        policy: deny
+
+    - name: Activer UFW
+      community.general.ufw:
+        state: enabled
+
+    - name: S'assurer que fail2ban tourne et demarre au boot
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: started
+        enabled: true
+
+    - name: S'assurer que SSH demarre au boot
+      ansible.builtin.systemd:
+        name: ssh
+        enabled: true
+
+    - name: Basculer sudo-rs vers le sudo classique (compat Ansible)
+      community.general.alternatives:
+        name: sudo
+        path: /usr/bin/sudo.ws
+
+    - name: Deposer la configuration SSH durcie
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/00-hardening.conf
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          # Gere par Ansible - ne pas editer a la main
+          PubkeyAuthentication yes
+          PasswordAuthentication no
+          KbdInteractiveAuthentication no
+          PermitRootLogin no
+        validate: /usr/sbin/sshd -t -f %s
+      notify: Redemarrer SSH
+
+  handlers:
+    - name: Redemarrer SSH
+      ansible.builtin.systemd:
+        name: ssh
+        state: restarted

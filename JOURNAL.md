@@ -181,3 +181,23 @@
 - Persistent=true : rattrapage si serveur éteint. Vérif via journalctl -u backup-lab.service.
 - À venir : réplication hors-site vers le VPS (SFTP).
 
+## SRV-ANSIBLE-01 — idempotence validée
+- 2e exécution de durcissement.yml : ok=8, changed=0, failed=0. ✅
+- Concept ancré : Ansible décrit un ÉTAT, compare, et n'agit que sur l'écart.
+  Rejouable à l'infini sans risque → automatisation sûre.
+- Valeur démontrée : détection + correction auto d'une dérive réelle (ssh disabled).
+
+## Ansible — parc multi-machines
+- Inventaire enrichi : groupes webservers + control, groupe parent [linux:children].
+- ansible_python_interpreter figé (fin des warnings).
+- Playbook joué sur 2 machines : srv-ansible-01 (changed=4, machine vierge durcie
+  automatiquement) / srv-web-01 (changed=0, déjà conforme).
+- Correction sudo-rs encodée dans le playbook (module alternatives) => reproductible.
+- Preuve : un même fichier fait converger un parc hétérogène vers l'état voulu.
+
+## Ansible — durcissement SSH encodé
+- Tâche copy : dépôt de /etc/ssh/sshd_config.d/00-hardening.conf (clé-only, no root).
+- validate: sshd -t => Ansible refuse d'écrire une config invalide (garde-fou).
+- Handler "Redemarrer SSH" : déclenché UNIQUEMENT si le fichier change (notify).
+- Résultat : srv-ansible-01 durci automatiquement, srv-web-01 inchangé.
+
