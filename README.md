@@ -2,7 +2,7 @@
 
 Projet personnel de montée en compétences en **administration systèmes, réseau et sécurité**.
 L'objectif : concevoir, déployer et documenter **de zéro** l'infrastructure informatique
-d'une PME fictive de 50 salariés, entièrement virtualisée sur une seule machine.
+d'une PME fictive, entièrement virtualisée sur une seule machine.
 
 Ce dépôt sert de **portfolio** : il retrace les choix d'architecture, les configurations,
 les incidents rencontrés et leur résolution, ainsi que la feuille de route.
