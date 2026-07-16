@@ -1,4 +1,4 @@
-# 🖥️ Homelab PME — Infrastructure simulée d'une entreprise de 50 salariés
+# 🖥️ Homelab PME — Infrastructure simulée d'une entreprise
 
 Projet personnel de montée en compétences en **administration systèmes, réseau et sécurité**.
 L'objectif : concevoir, déployer et documenter **de zéro** l'infrastructure informatique
